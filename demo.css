@@ -1,0 +1,17 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+canvas {
+    background: #F0F0F2;
+    display: inline-block;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+.lock-footer a {
+    color: #000;
+    font-size: 16px;
+    text-decoration: none;
+    display: block;
+    margin-top: 10px;
+}
