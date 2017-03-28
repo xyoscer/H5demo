@@ -2,6 +2,15 @@
     margin: 0;
     padding: 0;
 }
+body {
+    text-align: center;
+    background-color: #F0F0F2;
+}
+
+.title {
+    color: #22C3AA;
+    margin-top:10px;
+}
 canvas {
     background: #F0F0F2;
     display: inline-block;
@@ -14,4 +23,71 @@ canvas {
     text-decoration: none;
     display: block;
     margin-top: 10px;
+}
+
+p {
+    color: #000;
+    border:1px solid #eee;
+    height:30px;
+    font-size: 14px;
+
+}
+
+/*radio默认框消失*/
+.radio {
+    display: none;
+}
+
+/*radio,label做相对定位，为后面before,after元素能够正确放置*/
+
+.radio + label {
+    position: relative;
+    display: block;
+    width: 15em;
+    margin:10px auto;
+    cursor: pointer;
+}
+
+/*接着在radio,checkbox的label前面添加框框*/
+
+.radio + label::before {
+    position: absolute;
+    top: .2em;
+    left: 3em;
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    content: '';
+    border: 1px solid #c0c0c0;
+}
+
+/*接着在radio的label的after元素隐藏*/
+
+.radio + label::after {
+    display: none;
+    content: '';
+}
+
+/*接着选中时radio的label的after元素显示*/
+
+.radio:checked + label::after {
+    display: block;
+}
+
+.radio + label::before {
+    border-radius: 50%;
+}
+
+.radio + label::after {
+    position: absolute;
+    top: .55em;
+    left: 3.35em;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22C3AA;
+}
+
+.radio:checked + label::before {
+    border: 1px solid #22C3AA;
 }

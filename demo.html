@@ -5,23 +5,21 @@
     <title>H5实现手解屏效果</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="demo.css">
-    <style type="text/css">
-        body {
-            text-align: center;
-            background-color: #F0F0F2;
-        }
-        .title {
-            color: #22C3AA;
-        }
-    </style>
 </head>
 <body>
 <script type="text/javascript" src="demo1.js"></script>
 <script type="text/javascript">
-
     var lock = new Lock({
-        RowcircleNum: 3
+        RowcircleNum: 3 // 定制输入页面的圆圈的的行数与列数
     });
+    //  订阅设置密码和验证密码消息
+    lock.on('setPwd', function(){
+         console.log('设置密码操作');
+    });
+    lock.on('verifyPwd', function(){
+         console.log('验证密码操作');
+    });
+
 
 </script>
 </body>
