@@ -126,7 +126,7 @@ var emitter = {
         },
         // 手势滑动过的点，在圆圈里面画小圆
         drawPoint: function(gotoCircle) {
-            for (var i = 0 ; i < gotoCircle.length ; i++) {
+            for (let i = 0 ; i < gotoCircle.length ; i++) {
                 this.ctx.fillStyle = 'red';
                 this.ctx.beginPath();
                 this.ctx.arc(gotoCircle[i].x, gotoCircle[i].y, this.r / 4, 0, Math.PI * 2, true);
@@ -140,7 +140,7 @@ var emitter = {
             this.ctx.lineWidth = 1;
             // 路径的起点坐标
             this.ctx.moveTo(gotoCircle[0].x, gotoCircle[0].y);
-            for (var i = 1 ; i < gotoCircle.length ; i++) {
+            for (let i = 1 ; i < gotoCircle.length ; i++) {
                 // 中间点坐标
                 this.ctx.lineTo(gotoCircle[i].x, gotoCircle[i].y);
             }
@@ -204,9 +204,10 @@ var emitter = {
         // touchend结束后，保存手势经过的节点坐标
         savePwd: function(pwd,num) {
             var pswObj = {};
-            // 将划过的路径保存在一个对象中，只保存点的在数组中的位置
+            // 将划过的路径保存在一个对象中，只保存点在数组中的位置
             for(let i = 0;i<pwd.length;i++) {
-                pswObj[pwd[i].index] = pwd[i].index;
+                pswObj["step"+pwd[i].index] = md5(pwd[i].index);
+
             }
             var str = JSON.stringify(pswObj);
             if(num === 1 ) { // 是第一次设置密码
@@ -224,8 +225,9 @@ var emitter = {
                 if(this.checkpwd("password1","password2")) {
                     this.para.innerHTML = "密码设置成功";
                 }else {
-                    this.para.innerHTML = "两次密码不一致，请重新输入";
+                    this.para.innerHTML = "两次密码不一致，请重新设置密码";
                     window.localStorage.removeItem('password2');
+                    window.localStorage.removeItem('password1');
                 }
             }
             if(num === 3) { // 进入滑动解锁
@@ -238,7 +240,7 @@ var emitter = {
                     this.para.innerHTML = "密码正确";
                     this.title.innerHTML = "360星计划欢迎您!";
                 }else {
-                    this.para.innerHTML = "输入密码有误";
+                    this.para.innerHTML = "输入密码有误，请重新输入密码";
                     window.localStorage.removeItem('password3');
                 }
             }
@@ -260,11 +262,11 @@ var emitter = {
         },
         // 重置页面
         reset:function() {
+            this.gotoCircle.length = 0;
             this.createCircle();
         },
         //初始化lock屏状态信息，以及初始化事件
         init:function() {
-            var that = this;
             this.gotoCircle = [];    // gotoCircle保存手势正确的经过的圈圈路径
             this.arrCircle = [];     // 保存总共的圆圈个数
             this.notGotoPoint = [];  // 保存手势没有经过的那些圆圈点
@@ -274,9 +276,9 @@ var emitter = {
             this.para = document.getElementsByClassName('m-para')[0];
             this.title = document.getElementById('title');
             this.createCircle();
-            document.getElementById('Password').addEventListener('touchstart', this._drawPwd.bind(this)
+            document.getElementById('Password').addEventListener('click', this._drawPwd.bind(this)
             ,false);
-            document.getElementById('validpwd').addEventListener('touchstart', this._verifyPwd.bind(this)
+            document.getElementById('validpwd').addEventListener('click', this._verifyPwd.bind(this)
             ,false);
 
         },
@@ -295,8 +297,14 @@ var emitter = {
         },
         _verifyPwd:function() {
             this.para.innerHTML = "输入验证密码";
-            this.bindEvent();
-            this.emit('verifyPwd'); //发布执行setPwd函数消息
+            if(window.localStorage.getItem('password1') == null) {
+                this.para.innerHTML = "您还没有设置密码，不能进行解锁";
+            }else {
+                this.bindEvent();
+                this.emit('verifyPwd'); //发布执行setPwd函数消息
+            }
+
+
         },
         // 进行touch事件
         bindEvent:function() {
@@ -305,8 +313,7 @@ var emitter = {
                 e.preventDefault();// 某些android 的 touchmove不宜触发 所以增加此行代码
                 var po = that.getPosition(e);
                 that.para.innerHTML = "";
-                that.gotoCircle = [];
-                for (var i = 0 ; i < that.arrCircle.length ; i++) {
+                for (let i = 0 ; i < that.arrCircle.length ; i++) {
                     if (Math.abs(po.x - that.arrCircle[i].x) < that.r && Math.abs(po.y - that.arrCircle[i].y) < that.r) {
                         that.touchFlag = true; // 记录touch下的状态
                         that.gotoCircle.push(that.arrCircle[i]); // 划过的点进入数组
@@ -323,20 +330,27 @@ var emitter = {
             this.canvas.addEventListener("touchend", function (e) {
                 if (that.touchFlag) {
                     that.touchFlag = false;
-                  if(that.gotoCircle.length <= 4) {
-                       that.para.innerHTML = "密码长度太短，请至少划过5个点";
+                  if(that.gotoCircle.length < 4) {
+                       that.para.innerHTML = "密码长度太短，请至少划过4个点";
                   }
                   else {
                       if(window.localStorage.getItem('password1') == null) {
-                          that.savePwd(that.gotoCircle,1); // 第一次设置密码touch过的点，保存在本地
-                           that.para.innerHTML = "请再次输入密码";
+                          if(document.getElementById('validpwd').checked) {
+                              that.para.innerHTML = "没有设置密码，验证密码有错";
+                              setTimeout(function(){
+                                  that.reset();
+                              }, 1000);
+                          }else {
+                              that.savePwd(that.gotoCircle,1); // 第一次设置密码touch过的点，保存在本地
+                              that.para.innerHTML = "请再次输入密码";
+                          }
+
                       }else if(window.localStorage.getItem('password1')&&window.localStorage.getItem('password2') == null){
                           setTimeout(function(){
                               that.reset();
                           }, 1000);
-                          that.bindEvent();
                           that.savePwd(that.gotoCircle,2); // 确认输入密码touch过的点，保存在本地
-                      }else {
+                      }else{
                           setTimeout(function(){
                               that.reset();
                           }, 1000);
