@@ -9,22 +9,44 @@ body {
 
 .title {
     color: #22C3AA;
-    margin-top:10px;
+    position: absolute;
+    height:50px;   
+    top:10px;
+    left:0;
+    right:0;
+    text-align: center;
+    line-height: 50px;
+    
+}
+.m-lock {
+     position: relative;
+     width: 100%;
+     padding-bottom: 100%;
+     height: 0;
 }
 canvas {
     background: #F0F0F2;
+    position: absolute;
+    top:50px;
+    left:50%;
+    transform: translateX(-50%);
     display: inline-block;
-    margin-top: 15px;
-    margin-bottom: 15px;
+   
 }
-.lock-footer a {
-    color: #000;
-    font-size: 16px;
-    text-decoration: none;
-    display: block;
-    margin-top: 10px;
+#bg_canvas {
+  
 }
-
+#paint_canvas {
+    background-color: transparent;
+    z-index: 100;
+}
+.m-footer {
+    position: absolute;
+    left:0;
+    right:0;
+    top: 400px;
+    text-align: center;
+}
 p {
     color: #000;
     border:1px solid #eee;
@@ -41,19 +63,23 @@ p {
 /*radio,label做相对定位，为后面before,after元素能够正确放置*/
 
 .radio + label {
+    
     position: relative;
     display: block;
-    width: 15em;
-    margin:10px auto;
+    width: 10rem;
+    height: 2rem;
+    margin-left: auto;
+    margin-right: auto;    
     cursor: pointer;
+    background-color: transparent;
 }
 
 /*接着在radio,checkbox的label前面添加框框*/
 
 .radio + label::before {
     position: absolute;
-    top: .2em;
-    left: 3em;
+    top: -0.1rem;
+    left: 0.5rem;
     display: inline-block;
     width: 20px;
     height: 20px;
@@ -80,14 +106,18 @@ p {
 
 .radio + label::after {
     position: absolute;
-    top: .55em;
-    left: 3.35em;
+    top: 0.3rem;
+    left: 0.95rem;
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: #22C3AA;
 }
-
+.radio:checked + label{
+    
+    background-color: transparent;
+}
 .radio:checked + label::before {
     border: 1px solid #22C3AA;
+    
 }

@@ -16,11 +16,12 @@ var emitter = {
     },
     // 解绑事件，解除订阅
     off: function(event, fn) {
-        if(!event || !this._handles) this._handles = {};
+        if(!event || !this._handles)  {
+            this._handles = {};
+        }
         if(!this._handles) return;
-
-        var handles = this._handles , calls;
-
+        var handles = this._handles;
+        var calls;
         if (calls = handles[event]) {
             if (!fn) {
                 handles[event] = [];
@@ -72,20 +73,31 @@ var emitter = {
         return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
     }
     // 页面HTML模板
-    var template = '<div class="m-lock"><h4 id="title" class="title">手势密码</h4>\
-                   <canvas  id="canvas" width="300" height="300"></canvas>\
-                   <p class="m-para"></p>\
-                    <div class="m-footer">\
-                     <input type="radio"  class="radio"  name="pwd" id="Password">\
-                     <label for="Password">设置密码</label>\
-                     <input type="radio" class="radio" name="pwd" id="validpwd">\
-                     <label for="validpwd">验证密码</label></div>\
-                 </div>';
+    var template = `<div class="m-lock"><h4 id="title" class="title">手势密码</h4>
+                   <canvas  id="bg_canvas" width="300" height="300"></canvas>
+                   <canvas  id="paint_canvas" width="300" height="300"></canvas>
+                   
+                    <div class="m-footer">
+                    <p class="m-para"></p>
+                     <input type="radio"  class="radio"  name="pwd" id="Password">
+                     <label for="Password">设置密码</label>
+                     <input type="radio" class="radio" name="pwd" id="validpwd">
+                     <label for="validpwd">验证密码</label></div>
+                 </div>`;
     // 构造锁屏
     function Lock(options) {
         options = options || {};
-        this.container = this._layout.cloneNode(true);
         extend(this, options);
+        this.gotoCircle = [];    // gotoCircle保存手势正确的经过的圈圈路径
+        this.arrCircle = [];     // 保存总共的圆圈个数
+        this.notGotoPoint = [];  // 保存手势没有经过的那些圆圈点
+        this.container = this._layout.cloneNode(true);
+        this.bGcanvas = document.getElementById('bg_canvas');
+        this.paintCanvas  = document.getElementById('paint_canvas');
+        this.ctx = this.bGcanvas.getContext('2d');
+        this.ptctx = this.paintCanvas.getContext('2d');
+        this.para = document.getElementsByClassName('m-para')[0];
+        this.title = document.getElementById('title');
         this.init();
 
     }
@@ -93,64 +105,50 @@ var emitter = {
     extend(Lock.prototype,{
        _layout: htmlTonode(template),
 
-        // 划过的点与未滑过点的距离
-       pickPoints: function(fromPt,toPt) {
-           var lineLen = getDistance(fromPt,toPt);
-           var dir = toPt.index > fromPt.index ? 1 : -1;
-           var len = this.notGotoPoint.length;
-           var i = (dir === 1) ? 0: (len - 1);
-           var limit = (dir === 1)? len : -1;
-           while(i !== limit) {
-               var pt = this.notGotoPoint[i];
-               if(getDistance(pt,fromPt) + getDistance(pt,toPt) === lineLen) {
-                   this.gotoCircle.push(pt);
-                   this.notGotoPoint.splice(i, 1);
-                   if(limit > 0) {
-                       i--;
-                       limit--;
-                   }
-               }
-               i += dir;
-           }
-       },
-        // 根据计算出来的坐标，在对应的位置画圆
-       drawCircle: function(x, y) {
-            this.ctx.strokeStyle = 'red';
-            this.ctx.fillStyle = '#FFA724';
-            this.ctx.linewidth = 1;
+        // 根据计算出来的坐标，在对应的位置画实心圆
+       drawouterCircle: function(x, y) {
+            this.ctx.strokeStyle = this.lineColor;
+            this.ctx.fillStyle = this.outCircleColor;
+            this.ctx.lineWidth = this.lineWidth;
             this.ctx.beginPath();
             this.ctx.arc(x, y, this.r, 0, Math.PI * 2, true); //画圆圈
             this.ctx.closePath();
             this.ctx.stroke();
             this.ctx.fill();
         },
-        // 手势滑动过的点，在圆圈里面画小圆
-        drawPoint: function(gotoCircle) {
+        // 手势滑动过的点，在圆圈里面画小圆 标记手势已经划过
+        drawinnerCircle: function(gotoCircle) {
             for (let i = 0 ; i < gotoCircle.length ; i++) {
-                this.ctx.fillStyle = 'red';
-                this.ctx.beginPath();
-                this.ctx.arc(gotoCircle[i].x, gotoCircle[i].y, this.r / 4, 0, Math.PI * 2, true);
-                this.ctx.closePath();
-                this.ctx.fill();
+                this.ptctx.fillStyle = this.innerCircleColor;
+                this.ptctx.beginPath();
+                this.ptctx.arc(gotoCircle[i].x, gotoCircle[i].y, this.r / 4, 0, Math.PI * 2, true);
+                this.ptctx.closePath();
+                this.ptctx.fill();
             }
         },
+
         // 描绘touch过的路径
-        drawLine:function(po, gotoCircle) {
-            this.ctx.beginPath();
-            this.ctx.lineWidth = 1;
+        drawLine:function(po,gotoCircle) {
+            this.ptctx.beginPath();
+            this.ptctx.lineWidth = 1;
             // 路径的起点坐标
-            this.ctx.moveTo(gotoCircle[0].x, gotoCircle[0].y);
+            this.ptctx.moveTo(gotoCircle[0].x, gotoCircle[0].y);
+           
             for (let i = 1 ; i < gotoCircle.length ; i++) {
-                // 中间点坐标
-                this.ctx.lineTo(gotoCircle[i].x, gotoCircle[i].y);
+                // 路径经过的点
+                this.ptctx.lineTo(gotoCircle[i].x, gotoCircle[i].y);
+                 
             }
-            // 中间点坐标
-            this.ctx.lineTo(po.x, po.y);
-            this.ctx.stroke();
-            this.ctx.closePath();
+            this.ptctx.lineTo(po.x, po.y);  // 会出现小尾巴
+            this.ptctx.strokeStyle = this.lineColor;
+            this.ptctx.stroke();
+            this.ptctx.closePath();
         },
-        // 创建解锁圆圈的坐标位置
+        // 创建解锁圆圈的坐标位置,并在页面上绘制出解锁图案圆圈
         createCircle:function() {
+            // 每次创建时，先消除之前的页面的圆圈，重新画
+            this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+           
             var n = this.RowcircleNum; // 确定一行中圆圈的个数
             var count = 0; // 解锁圆圈的个数
             // 创建解锁点的坐标，根据canvas的大小来平均分配半径
@@ -169,9 +167,9 @@ var emitter = {
                     this.notGotoPoint.push(obj);
                 }
             }
-            this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+            // 画出每一个圆
             for (var i = 0 ; i < this.arrCircle.length ; i++) {
-                this.drawCircle(this.arrCircle[i].x, this.arrCircle[i].y);
+                this.drawouterCircle(this.arrCircle[i].x, this.arrCircle[i].y);
             }
         },
         // 获取touch点相对于canvas的坐标
@@ -187,20 +185,25 @@ var emitter = {
         },
         // tocuh移动到不同的点上
        update: function(po) {
-            this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-            for (let i = 0 ; i < this.arrCircle.length ; i++) {
-                this.drawCircle(this.arrCircle[i].x, this.arrCircle[i].y);
-            }
-            this.drawPoint(this.gotoCircle);// touch过的圆圈上画小圆圈
-            this.drawLine(po, this.gotoCircle);// 绘制经过的路径
+        // 每次touchmove都要进行清除上层画布，重新画
+         
+        this.ptctx.clearRect(0, 0, this.ptctx.canvas.width, this.ptctx.canvas.height);
+            // 绘制此次mouve之前的圆圈与路径
+        this.drawinnerCircle(this.gotoCircle);// touch过的圆圈上画小圆圈 
+        this.drawLine(po, this.gotoCircle);// 绘制经过的路径
+            // 判断该次的触摸点的位置是否在可触摸的范围内
             for (let i = 0 ; i < this.notGotoPoint.length ; i++) {
                var pt = this.notGotoPoint[i];
-                if (Math.abs(po.x - pt.x) < this.r && Math.abs(po.y - pt.y) < this.r) {
-                    this.pickPoints(this.gotoCircle[this.gotoCircle.length - 1], pt);
-                    break;
-                }
-            }
-    },
+                if (getDistance(po,pt) < this.r) {
+                    this.gotoCircle.push(pt);
+                    this.notGotoPoint.splice(i, 1); 
+                  
+                 }
+            }        
+            
+               
+           },
+
         // touchend结束后，保存手势经过的节点坐标
         savePwd: function(pwd,num) {
             var pswObj = {};
@@ -238,7 +241,7 @@ var emitter = {
                 if(this.checkpwd("password2","password3")) {
 
                     this.para.innerHTML = "密码正确";
-                    this.title.innerHTML = "360星计划欢迎您!";
+                    this.title.innerHTML = "解锁成功!";
                 }else {
                     this.para.innerHTML = "输入密码有误，请重新输入密码";
                     window.localStorage.removeItem('password3');
@@ -263,18 +266,15 @@ var emitter = {
         // 重置页面
         reset:function() {
             this.gotoCircle.length = 0;
-            this.createCircle();
+            this.title.innerHTML = "";
+            this.ptctx.clearRect(0, 0, this.ptctx.canvas.width, this.ptctx.canvas.height);
+            for(var i=0;i<this.arrCircle.length;i++) {
+                this.notGotoPoint[i] = this.arrCircle[i];
+            }
         },
         //初始化lock屏状态信息，以及初始化事件
-        init:function() {
-            this.gotoCircle = [];    // gotoCircle保存手势正确的经过的圈圈路径
-            this.arrCircle = [];     // 保存总共的圆圈个数
-            this.notGotoPoint = [];  // 保存手势没有经过的那些圆圈点
-            this.touchFlag = false;
-            this.canvas = document.getElementById('canvas');
-            this.ctx = this.canvas.getContext('2d');
-            this.para = document.getElementsByClassName('m-para')[0];
-            this.title = document.getElementById('title');
+        init:function() {         
+            this.touchFlag = false;  // 用于判断是否触摸在圆圈点上         
             this.createCircle();
             document.getElementById('Password').addEventListener('click', this._drawPwd.bind(this)
             ,false);
@@ -309,27 +309,32 @@ var emitter = {
         // 进行touch事件
         bindEvent:function() {
             var that = this;
-            this.canvas.addEventListener("touchstart", function (e) {
-                e.preventDefault();// 某些android 的 touchmove不宜触发 所以增加此行代码
-                var po = that.getPosition(e);
+            this.paintCanvas.addEventListener("touchstart", function (e) {
+                console.log("触发touchatart");
+                e.preventDefault(); // 阻止浏览器继续处理触摸事件
+                var po = that.getPosition(e);// 获得触摸点的相对位置
                 that.para.innerHTML = "";
-                for (let i = 0 ; i < that.arrCircle.length ; i++) {
-                    if (Math.abs(po.x - that.arrCircle[i].x) < that.r && Math.abs(po.y - that.arrCircle[i].y) < that.r) {
+                for (let i = 0 ; i < that.notGotoPoint.length ; i++) {
+                    var pt = that.notGotoPoint[i];
+                      // 触摸点在圆圈内，标记此点为touch的点
+                    if (getDistance(po,pt) < that.r) {
                         that.touchFlag = true; // 记录touch下的状态
-                        that.gotoCircle.push(that.arrCircle[i]); // 划过的点进入数组
+                        that.gotoCircle.push(that.notGotoPoint[i]); // 划过的点进入数组
+                       // that.drawinnerCircle(that.gotoCircle);// touch过的圆圈上画小圆圈
                         that.notGotoPoint.splice(i,1); // 保存全部圆圈中去除正确路径之后剩余的
-                        break;
+                       
                     }
                 }
+
             }, false);
-            this.canvas.addEventListener("touchmove", function (e) {
+            this.paintCanvas.addEventListener("touchmove", function (e) {
                 if (that.touchFlag) {
                     that.update(that.getPosition(e));
                 }
             }, false);
-            this.canvas.addEventListener("touchend", function (e) {
+            this.paintCanvas.addEventListener("touchend", function (e) {               
                 if (that.touchFlag) {
-                    that.touchFlag = false;
+                    that.touchFlag = false;                     
                   if(that.gotoCircle.length < 4) {
                        that.para.innerHTML = "密码长度太短，请至少划过4个点";
                   }
@@ -337,28 +342,24 @@ var emitter = {
                       if(window.localStorage.getItem('password1') == null) {
                           if(document.getElementById('validpwd').checked) {
                               that.para.innerHTML = "没有设置密码，验证密码有错";
-                              setTimeout(function(){
-                                  that.reset();
-                              }, 1000);
+                              
                           }else {
                               that.savePwd(that.gotoCircle,1); // 第一次设置密码touch过的点，保存在本地
                               that.para.innerHTML = "请再次输入密码";
                           }
 
                       }else if(window.localStorage.getItem('password1')&&window.localStorage.getItem('password2') == null){
-                          setTimeout(function(){
-                              that.reset();
-                          }, 1000);
+                          
                           that.savePwd(that.gotoCircle,2); // 确认输入密码touch过的点，保存在本地
                       }else{
-                          setTimeout(function(){
-                              that.reset();
-                          }, 1000);
+                         
                           that.savePwd(that.gotoCircle,3); // 验证密码touch过的点，保存在本地
                       }
                   }
-                    setTimeout(function(){
+               setTimeout(function(){
                         that.reset();
+                        
+                         
                     }, 1000);
                 }
             }, false);
