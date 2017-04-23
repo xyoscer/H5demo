@@ -1,5 +1,8 @@
 # H5demo--手势密码锁屏解锁实现
 
+#### 在线效果
+![](http://7xyfje.com1.z1.glb.clouddn.com/H5Demo.png)
+
 #### 任务描述：
      
    - 在移动端设备上，完成一个“UI手势密码锁屏解锁”组件
